@@ -2,6 +2,7 @@ use std::io;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
+use std::env;
 
 // Bytecode commands
 // 0x00: IDK (think of something for this)
@@ -28,11 +29,14 @@ use std::io::Read;
 // 0x1e: MIN
 // 0x1f: MAX
   
+// ./slipcode Q:/Code/slipcompiler/Test.slb
+
 fn main() {
     println!("Slipcode | Skye Terran, 2021\n");
 
-    let file_path: String = "Q:/Code/slipcompiler/Test.slb".to_string();
-    let mut instructions: Vec<u8> = get_file_as_byte_vec(&file_path);
+    let args: Vec<String> = env::args().collect();
+    let file_path: &String = &args[1];
+    let mut instructions: Vec<u8> = get_file_as_byte_vec(file_path);
     let mut values: Vec<f32> = vec![];
 
     execute(&mut instructions, &mut values);
@@ -135,7 +139,7 @@ fn sub(values: &mut Vec<f32>) {
 }
 
 fn mul(values: &mut Vec<f32>) {
-    println!("SUB");
+    println!("MUL");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
