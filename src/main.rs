@@ -1,4 +1,7 @@
 use std::io;
+use std::fs;
+use std::fs::File;
+use std::io::Read;
 
 // Bytecode commands
 // 0x00: IDK (think of something for this)
@@ -28,7 +31,8 @@ use std::io;
 fn main() {
     println!("Slipcode | Skye Terran, 2021\n");
 
-    let mut instructions: Vec<u8> = vec![0x01, 0xbf, 0x80, 0x00, 0x00, 0x01, 0x42, 0x65, 0x51, 0xec, 0x02, 0x10, 0x04, 0x10, 0x04, 0x19, 0x11];
+    let file_path: String = "Q:/Code/slipcompiler/Test.slb".to_string();
+    let mut instructions: Vec<u8> = get_file_as_byte_vec(&file_path);
     let mut values: Vec<f32> = vec![];
 
     execute(&mut instructions, &mut values);
@@ -89,6 +93,7 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
                     0x04 => copy(values),
                     0x10 => add(values),
                     0x11 => sub(values),
+                    0x12 => mul(values),
                     0x19 => floor(values),
                     _ => break
                 }
@@ -124,6 +129,19 @@ fn sub(values: &mut Vec<f32>) {
         let a = a_opt.unwrap();
         let b = b_opt.unwrap();
         values.push(a - b);
+    } else {
+        println!("Not enough values.");
+    }
+}
+
+fn mul(values: &mut Vec<f32>) {
+    println!("SUB");
+    let b_opt = values.pop();
+    let a_opt = values.pop();
+    if a_opt.is_some() && b_opt.is_some() {
+        let a = a_opt.unwrap();
+        let b = b_opt.unwrap();
+        values.push(a * b);
     } else {
         println!("Not enough values.");
     }
@@ -182,4 +200,13 @@ fn as_u32_le(array: &[u8; 4]) -> u32 {
     ((array[1] as u32) <<  8) +
     ((array[2] as u32) << 16) +
     ((array[3] as u32) << 24)
+}
+
+fn get_file_as_byte_vec(filename: &String) -> Vec<u8> {
+    let mut f = File::open(&filename).expect("no file found");
+    let metadata = fs::metadata(&filename).expect("unable to read metadata");
+    let mut buffer = vec![0; metadata.len() as usize];
+    f.read(&mut buffer).expect("buffer overflow");
+
+    buffer
 }
