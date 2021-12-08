@@ -1,25 +1,37 @@
 use std::io;
 
+// Bytecode commands
+// 0x00: IDK (think of something for this)
+// 0x01: LIT (consume next bytes as literal)
+// 0x02: SWAP (swap n-1 and n)
+// 0x03: DEL (remove n)
+// 0x04: COPY (copy n to n+1)
+// 0x05: DEF (function definition start)
+// 0x06: END (function definition end)
+// 0x10: ADD (n-1 + n)
+// 0x11: SUB (n-1 - n)
+// 0x12: MUL (n-1 * n)
+// 0x13: DIV (n-1 / n)
+// 0x14: POW (n-1 ^ n)
+// 0x15: SQRT (square root of n)
+// 0x16: ONEMIN (1.0 - n)
+// 0x17: ROUND
+// 0x18: CEIL
+// 0x19: FLOOR
+// 0x1a: MOD (n-1 % n)
+// 0x1b: FRACT (fractional part of n)
+// 0x1c: COMP (1.0 / n)
+// 0x1d: LERP (lerp n-2 to n-1 by n alpha)
+// 0x1e: MIN
+// 0x1f: MAX
+
 fn main() {
-    println!("Slipcode | Skye Terran, 2021");
+    println!("Slipcode | Skye Terran, 2021\n");
 
-    let mut instructions: Vec<u8> = vec![];
-    let mut values: Vec<i32> = vec![];
+    let mut instructions: Vec<u8> = vec![0x01, 0xbf, 0x80, 0x00, 0x00, 0x01, 0x42, 0x65, 0x51, 0xec, 0x02, 0x10];
+    let mut values: Vec<f32> = vec![];
 
-    loop {
-        let input = get_input();
-        let mut iter = input.iter();
-        loop {
-            let byte_opt = iter.next();
-            if byte_opt.is_some() {
-                let byte = byte_opt.unwrap();
-                instructions.push(*byte);
-            } else {
-                break;
-            }
-        }
-        execute(&mut instructions, &mut values);
-    }
+    execute(&mut instructions, &mut values);
 }
 
 fn get_input() -> Vec<u8> {
@@ -36,13 +48,13 @@ fn get_input() -> Vec<u8> {
     bytes.to_vec()
 }
 
-fn execute(instructions: &mut Vec<u8>, values: &mut Vec<i32>) {
-    debug_instructions(instructions);
+fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
+    println!("Executing bytecode instructions...\n");
     let mut iter = instructions.iter();
     
     // Handle literals
     let mut is_literal = false;
-    let mut literal = [0u8; 8];
+    let mut literal = [0u8; 4];
     let mut lit_digit = 0;
     loop {
         let byte_opt = iter.next();
@@ -54,9 +66,13 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<i32>) {
                 literal[lit_digit] = *byte;
 
                 // Continue consuming the literal
-                if lit_digit >= 7 {
-                    let num = f32::from_bits()
+                if lit_digit >= 3 {
+                    let num = f32::from_bits(as_u32_be(&literal));
+                    values.push(num);
+                    println!("LIT {:?}", num);
+                    println!("Values: {:?}\n", values);
                     is_literal = false;
+                    lit_digit = 0;
                 } else {
                     lit_digit += 1;
                 }
@@ -67,12 +83,15 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<i32>) {
             if byte_opt.is_some() {
                 let byte = byte_opt.unwrap();
                 match byte {
-                    65 => add(values),
-                    75 => kill(values),
-                    76 => is_literal = true,
-                    83 => sub(values),
-                    88 => swap(values),
+                    0x01 => is_literal = true,
+                    0x02 => swap(values),
+                    0x03 => del(values),
+                    0x10 => add(values),
+                    0x11 => sub(values),
                     _ => break
+                }
+                if !is_literal {
+                    println!("Values: {:?}\n", values);
                 }
             } else {
                 break;
@@ -80,41 +99,10 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<i32>) {
         }
     }
     instructions.clear();
-    println!("Values: {:?}", values);
 }
 
-fn debug_instructions(instructions: &Vec<u8>) {
-    let mut readable_stack: Vec<String> = Vec::new();
-    let mut iter = instructions.iter();
-    loop {
-        let mut name = "";
-        let value = iter.next();
-        if value.is_some() {
-            let byte = value.unwrap();
-            let byte_array = [*byte];
-            match byte {
-                45 => name = "MINUS",
-                46 => name = "POINT",
-                48..=57 => name = std::str::from_utf8(&byte_array).unwrap(),
-                65 => name = "ADD",
-                70 => name = "LITERAL_FLOAT",
-                73 => name = "LITERAL_INT",
-                75 => name = "KILL",
-                76 => name = "LITERAL",
-                83 => name = "SUB",
-                88 => name = "SWAP",
-                _ => name = "NULL"
-            }
-            readable_stack.push(name.to_string());
-        } else {
-            break;
-        }
-    }
-    println!("Bytes: {:?}", instructions);
-    println!("Instructions: {:?}", readable_stack);
-}
-
-fn add(values: &mut Vec<i32>) {
+fn add(values: &mut Vec<f32>) {
+    println!("ADD");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -126,7 +114,8 @@ fn add(values: &mut Vec<i32>) {
     }
 }
 
-fn sub(values: &mut Vec<i32>) {
+fn sub(values: &mut Vec<f32>) {
+    println!("SUB");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -138,11 +127,13 @@ fn sub(values: &mut Vec<i32>) {
     }
 }
 
-fn kill(values: &mut Vec<i32>) {
+fn del(values: &mut Vec<f32>) {
+    println!("DEL");
     values.pop();
 }
 
-fn swap(values: &mut Vec<i32>) {
+fn swap(values: &mut Vec<f32>) {
+    println!("SWAP");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -155,15 +146,16 @@ fn swap(values: &mut Vec<i32>) {
     }
 }
 
-// Instruction codes
-// null (0) = NULL
-// - (45) = MINUS
-// . (46) = POINT
-// 0..9 (48..57) = numbers 0..9
-// F (70) = LIT_FLOAT
-// I (73) = LIT_INT
-// A (65) = ADD
-// K (75) = KILL (removes top value from stack)
-// L (76) = LITERAL
-// S (83) = SUB
-// X (88) = SWAP (switches the order of the last two values in the stack)
+fn as_u32_be(array: &[u8; 4]) -> u32 {
+    ((array[0] as u32) << 24) +
+    ((array[1] as u32) << 16) +
+    ((array[2] as u32) <<  8) +
+    ((array[3] as u32) <<  0)
+}
+
+fn as_u32_le(array: &[u8; 4]) -> u32 {
+    ((array[0] as u32) <<  0) +
+    ((array[1] as u32) <<  8) +
+    ((array[2] as u32) << 16) +
+    ((array[3] as u32) << 24)
+}
