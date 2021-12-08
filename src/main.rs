@@ -24,11 +24,11 @@ use std::io;
 // 0x1d: LERP (lerp n-2 to n-1 by n alpha)
 // 0x1e: MIN
 // 0x1f: MAX
-
+  
 fn main() {
     println!("Slipcode | Skye Terran, 2021\n");
 
-    let mut instructions: Vec<u8> = vec![0x01, 0xbf, 0x80, 0x00, 0x00, 0x01, 0x42, 0x65, 0x51, 0xec, 0x02, 0x10];
+    let mut instructions: Vec<u8> = vec![0x01, 0xbf, 0x80, 0x00, 0x00, 0x01, 0x42, 0x65, 0x51, 0xec, 0x02, 0x10, 0x04, 0x10, 0x04, 0x19, 0x11];
     let mut values: Vec<f32> = vec![];
 
     execute(&mut instructions, &mut values);
@@ -86,8 +86,10 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
                     0x01 => is_literal = true,
                     0x02 => swap(values),
                     0x03 => del(values),
+                    0x04 => copy(values),
                     0x10 => add(values),
                     0x11 => sub(values),
+                    0x19 => floor(values),
                     _ => break
                 }
                 if !is_literal {
@@ -132,6 +134,18 @@ fn del(values: &mut Vec<f32>) {
     values.pop();
 }
 
+fn copy(values: &mut Vec<f32>) {
+    println!("COPY");
+    let a_opt = values.pop();
+    if a_opt.is_some() {
+        let a = a_opt.unwrap();
+        values.push(a);
+        values.push(a);
+    } else {
+        println!("Not enough values.");
+    }
+}
+
 fn swap(values: &mut Vec<f32>) {
     println!("SWAP");
     let b_opt = values.pop();
@@ -143,6 +157,16 @@ fn swap(values: &mut Vec<f32>) {
         values.push(a);
     } else {
         println!("Not enough values.");
+    }
+}
+
+fn floor(values: &mut Vec<f32>) {
+    println!("FLOOR");
+    let a_opt = values.pop();
+    if a_opt.is_some() {
+        let a = a_opt.unwrap();
+        let a = a.floor();
+        values.push(a);
     }
 }
 
