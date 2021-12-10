@@ -3,6 +3,7 @@ use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::env;
+use simple_logger::SimpleLogger;
 
 // Bytecode commands
 // 0x00: IDK (think of something for this)
@@ -34,19 +35,21 @@ use std::env;
 // 0x01: INT (int) # Example: LIT INT 69
 // 0x02: FLT (float) # Example: LIT FLT -90.0
 // 0x03: VEC (vector) # Example: LIT VEC 1.0,-7.01,2.7
-  
+
 // ./slipcode Q:/Code/slipcompiler/Test.vcr
 
-// Opcode enum
-enum Opcode {
+// Opcode kind enum
+// TODO: put this in a "VCROperation" struct which implements a .execute() trait or smth
+enum VCROperationKind {
     Generic,
     Type,
     Value
 }
 
 fn main() {
-    println!("Slipcode | Skye Terran, 2021\n");
-
+    // Log levels are [error, warn, info, debug, trace] in descending order of priority
+    SimpleLogger::new().init().unwrap();
+    
     let args: Vec<String> = env::args().collect();
     let file_path: &String = &args[1];
     let mut instructions: Vec<u8> = get_file_as_byte_vec(file_path);
@@ -56,11 +59,11 @@ fn main() {
 }
 
 fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
-    println!("Executing bytecode instructions...\n");
+    log::info!("Executing bytecode instructions...\n");
     let mut iter = instructions.iter();
     
     // Handle literals
-    let mut op_type = Opcode::Generic;
+    let mut op_type = VCROperationKind::Generic;
     let mut literal = [0u8; 4];
     let mut lit_digit = 0;
 
@@ -71,15 +74,15 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
         // Contextually handle opcodes depending on their type
         match op_type {
             // Treat the opcode as a literal type declaration
-            Opcode::Type => {
+            VCROperationKind::Type => {
                 // Consume the literal type
                 let byte = byte_opt.unwrap();
 
                 // The following opcodes are expected to be a literal value
-                op_type = Opcode::Value;
+                op_type = VCROperationKind::Value;
             },
             // Treat the opcode as a literal value
-            Opcode::Value => {
+            VCROperationKind::Value => {
                 if byte_opt.is_some() {
                     let byte = byte_opt.unwrap();
                     // Record another of the literal's bytes
@@ -89,9 +92,9 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
                     if lit_digit >= 3 {
                         let num = f32::from_bits(as_u32_be(&literal));
                         values.push(num);
-                        println!("LIT {:?}", num);
-                        println!("Values: {:?}\n", values);
-                        op_type = Opcode::Generic;
+                        log::debug!("LIT {:?}", num);
+                        log::debug!("Values: {:?}\n", values);
+                        op_type = VCROperationKind::Generic;
                         lit_digit = 0;
                     } else {
                         lit_digit += 1;
@@ -105,7 +108,7 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
                 if byte_opt.is_some() {
                     let byte = byte_opt.unwrap();
                     match byte {
-                        0x01 => op_type = Opcode::Type,
+                        0x01 => op_type = VCROperationKind::Type,
                         0x02 => swap(values),
                         0x03 => del(values),
                         0x04 => copy(values),
@@ -116,8 +119,8 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
                         _ => break
                     }
                     // DEBUG - show the value stack upon every generic command
-                    if let Opcode::Generic = op_type {
-                        println!("Values: {:?}\n", values);
+                    if let VCROperationKind::Generic = op_type {
+                        log::debug!("Values: {:?}\n", values);
                     }
                 } else {
                     break;
@@ -129,7 +132,7 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
 }
 
 fn add(values: &mut Vec<f32>) {
-    println!("ADD");
+    log::debug!("ADD");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -137,12 +140,12 @@ fn add(values: &mut Vec<f32>) {
         let b = b_opt.unwrap();
         values.push(a + b);
     } else {
-        println!("Not enough values.");
+        log::error!("Not enough values.");
     }
 }
 
 fn sub(values: &mut Vec<f32>) {
-    println!("SUB");
+    log::debug!("SUB");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -150,12 +153,12 @@ fn sub(values: &mut Vec<f32>) {
         let b = b_opt.unwrap();
         values.push(a - b);
     } else {
-        println!("Not enough values.");
+        log::error!("Not enough values.");
     }
 }
 
 fn mul(values: &mut Vec<f32>) {
-    println!("MUL");
+    log::debug!("MUL");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -163,29 +166,29 @@ fn mul(values: &mut Vec<f32>) {
         let b = b_opt.unwrap();
         values.push(a * b);
     } else {
-        println!("Not enough values.");
+        log::error!("Not enough values.");
     }
 }
 
 fn del(values: &mut Vec<f32>) {
-    println!("DEL");
+    log::debug!("DEL");
     values.pop();
 }
 
 fn copy(values: &mut Vec<f32>) {
-    println!("COPY");
+    log::debug!("COPY");
     let a_opt = values.pop();
     if a_opt.is_some() {
         let a = a_opt.unwrap();
         values.push(a);
         values.push(a);
     } else {
-        println!("Not enough values.");
+        log::error!("Not enough values.");
     }
 }
 
 fn swap(values: &mut Vec<f32>) {
-    println!("SWAP");
+    log::debug!("SWAP");
     let b_opt = values.pop();
     let a_opt = values.pop();
     if a_opt.is_some() && b_opt.is_some() {
@@ -194,12 +197,12 @@ fn swap(values: &mut Vec<f32>) {
         values.push(b);
         values.push(a);
     } else {
-        println!("Not enough values.");
+        log::error!("Not enough values.");
     }
 }
 
 fn floor(values: &mut Vec<f32>) {
-    println!("FLOOR");
+    log::debug!("FLOOR");
     let a_opt = values.pop();
     if a_opt.is_some() {
         let a = a_opt.unwrap();
