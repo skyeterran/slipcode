@@ -60,7 +60,7 @@ fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
     let mut iter = instructions.iter();
     
     // Handle literals
-    let mut op_type: Opcode = Opcode::Generic;
+    let mut op_type = Opcode::Generic;
     let mut literal = [0u8; 4];
     let mut lit_digit = 0;
 
