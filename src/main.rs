@@ -33,7 +33,7 @@ use std::env;
 // 0x00: BOOL (boolean) # Example: LIT BOOL 0
 // 0x01: INT (int) # Example: LIT INT 69
 // 0x02: FLT (float) # Example: LIT FLT -90.0
-// 0x03: VEC (vector) # Example: LIT VEC 1.0 -7.01 2.7
+// 0x03: VEC (vector) # Example: LIT VEC 1.0,-7.01,2.7
   
 // ./slipcode Q:/Code/slipcompiler/Test.vcr
 
