@@ -28,8 +28,21 @@ use std::env;
 // 0x1d: LERP (lerp n-2 to n-1 by n alpha)
 // 0x1e: MIN
 // 0x1f: MAX
+
+// Contextual: literal types
+// 0x00: BOOL (boolean) # Example: LIT BOOL 0
+// 0x01: INT (int) # Example: LIT INT 69
+// 0x02: FLT (float) # Example: LIT FLT -90.0
+// 0x03: VEC (vector) # Example: LIT VEC 1.0 -7.01 2.7
   
-// ./slipcode Q:/Code/slipcompiler/Test.slb
+// ./slipcode Q:/Code/slipcompiler/Test.vcr
+
+// Opcode enum
+enum Opcode {
+    Generic,
+    Type,
+    Value
+}
 
 fn main() {
     println!("Slipcode | Skye Terran, 2021\n");
@@ -42,70 +55,73 @@ fn main() {
     execute(&mut instructions, &mut values);
 }
 
-fn get_input() -> Vec<u8> {
-    println!("\nEnter instruction:");
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)
-        .expect("Couldn't read input!");
-
-    println!("\n");
-
-    input.truncate(input.len() - 2);
-    let bytes = input.as_bytes();
-
-    bytes.to_vec()
-}
-
 fn execute(instructions: &mut Vec<u8>, values: &mut Vec<f32>) {
     println!("Executing bytecode instructions...\n");
     let mut iter = instructions.iter();
     
     // Handle literals
-    let mut is_literal = false;
+    let mut op_type: Opcode = Opcode::Generic;
     let mut literal = [0u8; 4];
     let mut lit_digit = 0;
+
+    // Handle each opcode in order
     loop {
         let byte_opt = iter.next();
 
-        if is_literal {
-            if byte_opt.is_some() {
+        // Contextually handle opcodes depending on their type
+        match op_type {
+            // Treat the opcode as a literal type declaration
+            Opcode::Type => {
+                // Consume the literal type
                 let byte = byte_opt.unwrap();
-                // Record another of the literal's bytes
-                literal[lit_digit] = *byte;
 
-                // Continue consuming the literal
-                if lit_digit >= 3 {
-                    let num = f32::from_bits(as_u32_be(&literal));
-                    values.push(num);
-                    println!("LIT {:?}", num);
-                    println!("Values: {:?}\n", values);
-                    is_literal = false;
-                    lit_digit = 0;
+                // The following opcodes are expected to be a literal value
+                op_type = Opcode::Value;
+            },
+            // Treat the opcode as a literal value
+            Opcode::Value => {
+                if byte_opt.is_some() {
+                    let byte = byte_opt.unwrap();
+                    // Record another of the literal's bytes
+                    literal[lit_digit] = *byte;
+    
+                    // Continue consuming the literal
+                    if lit_digit >= 3 {
+                        let num = f32::from_bits(as_u32_be(&literal));
+                        values.push(num);
+                        println!("LIT {:?}", num);
+                        println!("Values: {:?}\n", values);
+                        op_type = Opcode::Generic;
+                        lit_digit = 0;
+                    } else {
+                        lit_digit += 1;
+                    }
                 } else {
-                    lit_digit += 1;
+                    break;
                 }
-            } else {
-                break;
-            }
-        } else {
-            if byte_opt.is_some() {
-                let byte = byte_opt.unwrap();
-                match byte {
-                    0x01 => is_literal = true,
-                    0x02 => swap(values),
-                    0x03 => del(values),
-                    0x04 => copy(values),
-                    0x10 => add(values),
-                    0x11 => sub(values),
-                    0x12 => mul(values),
-                    0x19 => floor(values),
-                    _ => break
+            },
+            // Treat the opcode as a generic command
+            _ => {
+                if byte_opt.is_some() {
+                    let byte = byte_opt.unwrap();
+                    match byte {
+                        0x01 => op_type = Opcode::Type,
+                        0x02 => swap(values),
+                        0x03 => del(values),
+                        0x04 => copy(values),
+                        0x10 => add(values),
+                        0x11 => sub(values),
+                        0x12 => mul(values),
+                        0x19 => floor(values),
+                        _ => break
+                    }
+                    // DEBUG - show the value stack upon every generic command
+                    if let Opcode::Generic = op_type {
+                        println!("Values: {:?}\n", values);
+                    }
+                } else {
+                    break;
                 }
-                if !is_literal {
-                    println!("Values: {:?}\n", values);
-                }
-            } else {
-                break;
             }
         }
     }
